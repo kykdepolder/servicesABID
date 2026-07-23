@@ -202,14 +202,14 @@ const serviceMetrics={
     linkText:'Read the run-and-hypercare case'
   },
   process:{
-    title:'Business Process Reform \u2014 automation',
-    hero:'0',
-    heroUnit:'extra staff',
-    heroLabel:'temporary hires needed for high-volume data entry',
-    context:'An Indonesian multi-finance group with over 200 branches automated contract data entry and system migration using RPA with OCR. The work was completed without hiring and training temporary staff, and without building custom migration tools.',
-    formula:'Track manual touch points removed, cycle time, rework rate, and cost avoided per process.',
-    url:'https://www.abeam.com/id/en/news/2018/1101/',
-    linkText:'Read the process automation case'
+    title:'Business Process Reform \u2014 end-to-end standardization',
+    hero:'3',
+    heroUnit:'core processes',
+    heroLabel:'standardized end to end on one connected core',
+    context:'An Indonesian IT solutions company standardized order-to-cash, procure-to-pay, and record-to-report on a single source of truth in 2025. Manual effort dropped, reporting cycles shortened, and finance teams reached period close faster through streamlined reconciliations.',
+    formula:'Track manual touch points removed, period close duration, reporting cycle time, and reconciliation rework rate.',
+    url:'https://www.abeam.com/id/en/news/2025/1120/',
+    linkText:'Read the process standardization case'
   },
   people:{
     title:'People Transformation \u2014 HR digital',
