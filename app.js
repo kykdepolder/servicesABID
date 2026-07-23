@@ -2,6 +2,22 @@ const data=JSON.parse(document.getElementById('data').textContent);
 const scores={}; data.services.forEach(s=>scores[s.id]=0);
 let selectedTile=null, selectedPower=null, progress=0, chosenPower=null, selectedRole=null, selectedRoleLabel='';
 const contactUrl='https://www.abeam.com/id/en/contact_id/';
+function addUtm(url,content){
+  try{const u=new URL(url);
+    u.searchParams.set('utm_source','transformation_quest');
+    u.searchParams.set('utm_medium','interactive');
+    u.searchParams.set('utm_campaign','abeam_id_quest');
+    if(content) u.searchParams.set('utm_content',content);
+    return u.toString();
+  }catch(e){return url;}
+}
+function track(event,detail){
+  try{
+    window.dataLayer=window.dataLayer||[];
+    window.dataLayer.push(Object.assign({event:event},detail||{}));
+    if(typeof window.gtag==='function') window.gtag('event',event,detail||{});
+  }catch(e){}
+}
 const $=id=>document.getElementById(id);
 const roles=[
   {id:'it',label:'IT',service:'core',copy:'systems, data, integration, and technology enablement'},
@@ -74,7 +90,23 @@ function servicesForRole(){
 
 const serviceIconMap={}; data.services.forEach(s=>serviceIconMap[s.id]=s.icon);
 function serviceBy(id){return data.services.find(s=>s.id===id)||data.services[0];}
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');$('progressText').textContent=id==='intro'?'Quest 0/5':id==='result'?'Quest complete':`Quest ${progress}/5`;}
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+  $('progressText').textContent=id==='intro'?'Quest 0/5':id==='result'?'Quest complete':'Quest '+progress+'/5';
+  scrollToScreen(id);
+  track('quest_step',{step_id:id,step_number:progress,role:selectedRoleLabel||'none'});
+}
+function scrollToScreen(id){
+  const el=$(id); if(!el) return;
+  const header=document.querySelector('.site-header');
+  const offset=(header?header.offsetHeight:0)+12;
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  requestAnimationFrame(()=>{
+    const top=el.getBoundingClientRect().top+window.pageYOffset-offset;
+    window.scrollTo({top:top<0?0:top,behavior:reduce?'auto':'smooth'});
+  });
+}
 function score(service,points){scores[service]=(scores[service]||0)+points;}
 function winner(){return data.services.reduce((a,b)=>(scores[b.id]>scores[a.id]?b:a),data.services[0]);}
 function img(src){return `<img src="${src}" alt=""/>`;}
@@ -97,11 +129,30 @@ function roleAwareClues(){
   return base.slice(0,6).map((c,i)=>({ ...c, icon: data.iconPool[i%data.iconPool.length] }));
 }
 function renderClues(){
-  $('clueBank').innerHTML=roleAwareClues().map(c=>`<div class="tile" data-id="${c.id}" data-service="${c.service}">${img(c.icon)}<h4>${c.label}</h4></div>`).join('');
-  bindTiles();
+  $('clueBank').innerHTML=roleAwareClues().map(c=>`<div class="tile" data-id="${c.id}" data-service="${c.service}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(c.icon)}<h4>${c.label}</h4></div>`).join('');
+  bindTiles(); setHint('Tap a card to pick it up, or drag it straight into a zone.'); updateZoneCounts();
 }
-function bindTiles(){document.querySelectorAll('.tile').forEach(item=>{item.addEventListener('click',e=>{if(selectedTile)selectedTile.classList.remove('selected');selectedTile=item;item.classList.add('selected');e.stopPropagation();});item.addEventListener('pointerdown',startTileDrag);});document.querySelectorAll('.zone').forEach(z=>z.addEventListener('click',()=>{if(selectedTile){z.appendChild(selectedTile);selectedTile.classList.remove('selected');selectedTile=null;}}));}
-function startTileDrag(e){startDrag(e,'.zone',(item,zone)=>zone.appendChild(item));}
+function setHint(msg,active){
+  let el=document.getElementById('boardHint');
+  if(!el){const board=document.querySelector('#clueboard .board-layout');if(!board)return;
+    el=document.createElement('p');el.id='boardHint';el.className='board-hint';
+    board.parentNode.insertBefore(el,board);}
+  el.textContent=msg; el.classList.toggle('is-active',!!active);
+}
+function updateZoneCounts(){
+  document.querySelectorAll('#clueboard .zone').forEach(z=>{
+    let c=z.querySelector('.zone-count');
+    if(!c){c=document.createElement('b');c.className='zone-count';z.appendChild(c);}
+    const n=z.querySelectorAll('.tile').length;
+    c.textContent=n===0?'empty':n+(n===1?' card':' cards');
+  });
+  const left=document.querySelectorAll('#clueBank .tile').length;
+  const btn=$('lockBoard'); if(btn) btn.textContent=left>0?'Lock clue board ('+left+' left)':'Lock clue board';
+}
+function keyActivate(el,fn){el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){e.preventDefault();fn(e);}});}
+function bindTiles(){document.querySelectorAll('.tile').forEach(item=>{keyActivate(item,()=>item.click());item.addEventListener('click',e=>{if(selectedTile)selectedTile.classList.remove('selected');selectedTile=item;item.classList.add('selected');setHint('Picked up. Now tap Critical, Important, or Not relevant.',true);e.stopPropagation();});item.addEventListener('pointerdown',startTileDrag);});document.querySelectorAll('.zone').forEach(z=>{z.setAttribute('tabindex','0');z.setAttribute('role','button');keyActivate(z,()=>z.click());});
+document.querySelectorAll('.zone').forEach(z=>z.addEventListener('click',()=>{if(selectedTile){z.appendChild(selectedTile);selectedTile.classList.remove('selected');selectedTile=null;setHint('Placed. Pick the next card.');updateZoneCounts();}}));}
+function startTileDrag(e){startDrag(e,'.zone',(item,zone)=>{zone.appendChild(item);setHint('Placed. Pick the next card.');updateZoneCounts();});}
 function startPowerDrag(e){startDrag(e,'.power-slot',(item,slot)=>choosePower(item));}
 function startDrag(e,targetSelector,onDrop){if(e.button!==undefined&&e.button!==0)return;const item=e.currentTarget;const rect=item.getBoundingClientRect();const offX=e.clientX-rect.left,offY=e.clientY-rect.top;const originalParent=item.parentElement,next=item.nextSibling;item.classList.add('dragging');item.style.width=rect.width+'px';item.style.left=rect.left+'px';item.style.top=rect.top+'px';document.body.appendChild(item);function move(ev){item.style.left=(ev.clientX-offX)+'px';item.style.top=(ev.clientY-offY)+'px';document.querySelectorAll(targetSelector).forEach(z=>z.classList.remove('over'));const over=document.elementFromPoint(ev.clientX,ev.clientY)?.closest(targetSelector);if(over)over.classList.add('over');}function up(ev){document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);item.classList.remove('dragging');item.style.left=item.style.top=item.style.width='';const over=document.elementFromPoint(ev.clientX,ev.clientY)?.closest(targetSelector);document.querySelectorAll(targetSelector).forEach(z=>z.classList.remove('over'));if(over){onDrop(item,over);}else if(next){originalParent.insertBefore(item,next)}else{originalParent.appendChild(item)}}document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);}
 function scoreBoard(){document.querySelectorAll('.zone').forEach(z=>{const pts=z.dataset.zone==='critical'?5:z.dataset.zone==='important'?3:0;z.querySelectorAll('.tile').forEach(t=>score(t.dataset.service,pts));});}
@@ -141,7 +192,8 @@ function roleAwarePowerMoves(){
   const list=roleMoves[selectedRole]||data.powerMoves.slice(0,4);
   return list.map((m,i)=>({...m,icon:data.iconPool[(i+2)%data.iconPool.length]}));
 }
-function renderPower(){chosenPower=null;$('continuePower').disabled=true;$('powerSlot').innerHTML='<h3>My next move</h3><p>Drop one action card here.</p>';$('powerDeck').innerHTML=roleAwarePowerMoves().map(m=>`<div class="power-card" data-id="${m.id}" data-service="${m.service}" data-title="${m.title}">${img(m.icon)}<h3>${m.title}</h3><p>${m.copy}</p></div>`).join('');document.querySelectorAll('.power-card').forEach(card=>{card.addEventListener('pointerdown',startPowerDrag);card.addEventListener('click',()=>{if(selectedPower)selectedPower.classList.remove('selected');selectedPower=card;card.classList.add('selected');});});$('powerSlot').onclick=()=>{if(selectedPower)choosePower(selectedPower);};}
+function renderPower(){chosenPower=null;$('continuePower').disabled=true;$('powerSlot').innerHTML='<h3>My next move</h3><p>Drop one action card here.</p>';$('powerDeck').innerHTML=roleAwarePowerMoves().map(m=>`<div class="power-card" data-id="${m.id}" data-service="${m.service}" data-title="${m.title}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(m.icon)}<h3>${m.title}</h3><p>${m.copy}</p></div>`).join('');document.querySelectorAll('.power-card').forEach(card=>{keyActivate(card,()=>card.click());card.addEventListener('pointerdown',startPowerDrag);card.addEventListener('click',()=>{if(selectedPower)selectedPower.classList.remove('selected');selectedPower=card;card.classList.add('selected');});});const slot=$('powerSlot');slot.setAttribute('tabindex','0');slot.setAttribute('role','button');
+slot.onclick=()=>{if(selectedPower)choosePower(selectedPower);};keyActivate(slot,()=>slot.click());}
 function choosePower(card){if(chosenPower)return;chosenPower={id:card.dataset.id,title:card.dataset.title,service:card.dataset.service};score(card.dataset.service,3);card.classList.remove('selected');$('powerSlot').innerHTML='<h3>My next move</h3>';$('powerSlot').appendChild(card);$('continuePower').disabled=false;confetti(18);}
 function roleAwareFocusChoices(){
   const list=[...data.focusChoices];
@@ -225,9 +277,10 @@ const serviceMetrics={
     title:'Supply Chain \u2014 procurement integrity',
     hero:'3',
     heroUnit:'risk checks',
-    heroLabel:'built into one procurement analytics platform',
-    context:'An Indonesian steel manufacturer moved from manual supplier verification to graph analytics with ABeam Consulting Indonesia: tracing vendor and third-party connections, detecting anomalies in procurement activity, and flagging risk before it becomes loss.',
+    heroLabel:'designed into the procurement analytics platform',
+    context:'An Indonesian steel manufacturer is moving from manual supplier verification to graph analytics with ABeam Consulting Indonesia: tracing vendor and third-party connections, detecting anomalies in procurement activity, and flagging risk before it becomes loss.',
     formula:'Track supplier verification coverage, anomaly detection rate, and time to investigate a flagged transaction.',
+    kind:'approach',
     url:'https://www.abeam.com/id/en/news/2025/0416/',
     linkText:'Read the procurement analytics case'
   },
@@ -235,9 +288,10 @@ const serviceMetrics={
     title:'Strategy Transformation \u2014 process baseline',
     hero:'1',
     heroUnit:'baseline',
-    heroLabel:'shared process view for the whole transformation roadmap',
-    context:'An Indonesian state-owned fertilizer producer kicked off its digital transformation with ABeam Consulting Indonesia by first building one agreed process baseline in SAP Signavio\u00ae, so priorities and value cases could be argued from evidence.',
+    heroLabel:'shared process view before the roadmap is set',
+    context:'An Indonesian state-owned fertilizer producer kicked off its digital transformation with ABeam Consulting Indonesia in 2026, starting with one agreed process baseline in SAP Signavio\u00ae so priorities and value cases can be argued from evidence rather than opinion.',
     formula:'Track value-case coverage, process baseline completeness, and milestone achievement against the roadmap.',
+    kind:'approach',
     url:'https://www.abeam.com/id/en/news/2026/0129/',
     linkText:'Read the transformation kick-off case'
   }
@@ -255,6 +309,8 @@ function metricFor(service){
 }
 function renderMetric(service){
   const metric=metricFor(service);
+  const eyebrow=document.querySelector('#metricCard .eyebrow');
+  if(eyebrow) eyebrow.textContent=metric.kind==='approach'?'How this is being approached':'Measurable outcome';
   $('metricTitle').textContent=metric.title;
   $('metricValue').innerHTML=
     '<div class="metric-hero"><span class="metric-hero-num">'+metric.hero+'</span>'+
@@ -263,7 +319,7 @@ function renderMetric(service){
     '<p class="metric-detail">'+metric.context+'</p>';
   $('metricFormula').textContent=metric.formula;
   const link=$('insightLink');
-  if(link){link.href=metric.url;link.textContent=metric.linkText||'Read the case';link.target='_blank';link.rel='noopener';}
+  if(link){link.href=addUtm(metric.url,'insight_'+((service&&service.id)||'unknown'));link.textContent=metric.linkText||'Read the case';link.target='_blank';link.rel='noopener';}
   return metric;
 }
 
@@ -279,17 +335,34 @@ function result(){
   $('resultSummary').textContent=s.short;
   $('resultIcon').src=s.icon;
   $('resultCard').textContent=s.name;
-  $('serviceLink').href=contactUrl;
+  $('serviceLink').href=addUtm(contactUrl,'result_'+s.id);
+  track('quest_complete',{recommended_service:s.id,role:selectedRoleLabel||'none',next_move:(chosenPower&&chosenPower.title)||'none'});
   const critical=[...document.querySelectorAll('.zone[data-zone="critical"] .tile h4')].map(x=>x.textContent).slice(0,3);
   $('why').innerHTML='<strong>Why this unlocked:</strong><ul>'+(critical.map(c=>'<li>'+c+'</li>').join('')||'<li>Your role, mission, clue sorting, and power move pointed here.</li>')+'</ul>';
   $('recommend').innerHTML='<strong>Suggested next move:</strong> '+s.next+'<br><br><strong>Suggested ABeam service:</strong> '+s.support;
   try{renderMetric(s);}catch(err){console.error('Metric render failed',err);}
   try{$('contactMessage').value=buildMessage(s,critical);}catch(err){console.error('Message build failed',err);$('contactMessage').value='Hello ABeam Consulting Indonesia team, I completed the Transformation Quest and would like to discuss the recommended support.';}
+  collapseContact();
   show('result');
   confetti(44);
 }
+function collapseContact(){
+  const cc=document.querySelector('.contact-copy');
+  if(!cc||cc.dataset.wired) return;
+  cc.dataset.wired='1';
+  cc.classList.add('is-collapsed');
+  const btn=document.createElement('button');
+  btn.type='button'; btn.className='ghost-btn reveal-btn';
+  btn.textContent='Show message for the contact form';
+  cc.parentNode.insertBefore(btn,cc);
+  btn.onclick=()=>{
+    const closed=cc.classList.toggle('is-collapsed');
+    btn.textContent=closed?'Show message for the contact form':'Hide message';
+    if(!closed) cc.scrollIntoView({behavior:'smooth',block:'nearest'});
+  };
+}
 function confetti(n=30){const wrap=document.createElement('div');wrap.className='confetti';document.body.appendChild(wrap);for(let i=0;i<n;i++){const c=document.createElement('i');c.style.left=Math.random()*100+'vw';c.style.top='-20px';c.style.background=i%2?'#7d6e5a':'#001964';c.style.animationDelay=Math.random()*0.35+'s';wrap.appendChild(c);}setTimeout(()=>wrap.remove(),1500);}
-$('startQuest').onclick=()=>{progress=1;show('role');renderRoles();};$('restartTop').onclick=()=>location.reload();$('playAgain').onclick=()=>location.reload();$('lockBoard').onclick=()=>{scoreBoard();progress=4;show('power');renderPower();};$('continuePower').onclick=()=>{progress=5;show('choice');renderFocus();};$('copyMessage').onclick=async()=>{try{await navigator.clipboard.writeText($('contactMessage').value);$('copyStatus').textContent='Copied';}catch(e){$('contactMessage').select();document.execCommand('copy');$('copyStatus').textContent='Copied';}};
+$('startQuest').onclick=()=>{progress=1;show('role');renderRoles();};$('restartTop').onclick=()=>location.reload();$('playAgain').onclick=()=>location.reload();$('lockBoard').onclick=()=>{scoreBoard();progress=4;show('power');renderPower();};$('continuePower').onclick=()=>{progress=5;show('choice');renderFocus();};$('copyMessage').onclick=async()=>{try{await navigator.clipboard.writeText($('contactMessage').value);$('copyStatus').textContent='Copied';}catch(e){$('contactMessage').select();document.execCommand('copy');$('copyStatus').textContent='Copied';}track('quest_copy_message',{});};
 
 
 document.addEventListener('click',e=>{const finalChoice=e.target.closest&&e.target.closest('.final-choice');if(finalChoice){e.preventDefault();selectFinal(finalChoice.dataset.service);}});
