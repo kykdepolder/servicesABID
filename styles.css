@@ -130,3 +130,41 @@ h2{font-size:clamp(1.65rem,3.4vw,2.5rem);line-height:1.12}
 /* v20: visible focus for keyboard users */
 .zone:focus-visible,.power-slot:focus-visible,.role-card:focus-visible,.service-card:focus-visible,.trade-card:focus-visible,.primary-btn:focus-visible,.ghost-btn:focus-visible,.insight-link:focus-visible,.primary-link:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .zone:focus-visible{background:#f0ebe3}
+
+/* ===== v21: black brought into the palette ===== */
+:root{--black:#0f0f0f;--ink:#1a1a1a}
+
+/* near-black body text: sharper on beige and easier to read than #333 */
+body,.role-card p,.service-card p,.trade-card p,.power-card p,.why li,.board-hint,.metric-card .metric-detail,.contact-copy textarea{color:var(--ink)}
+
+/* offset shadows in black read crisper than the brown */
+.panel{box-shadow:14px 14px 0 rgba(15,15,15,.13)}
+.brand{box-shadow:8px 8px 0 rgba(15,15,15,.15)}
+.role-card,.service-card,.trade-card,.power-card,.contact-copy{box-shadow:8px 8px 0 rgba(15,15,15,.12)}
+.tile{box-shadow:4px 4px 0 rgba(15,15,15,.12)}
+.unlock-card{box-shadow:10px 10px 0 rgba(15,15,15,.13)}
+.primary-btn,.primary-link{box-shadow:6px 6px 0 rgba(15,15,15,.28)}
+.insight-link{box-shadow:5px 5px 0 rgba(15,15,15,.22)}
+
+/* secondary actions in black so they stop competing with the navy CTA */
+.ghost-btn,.quest-status button{border:1.5px solid var(--black);color:var(--black);background:#fff}
+.ghost-btn:hover,.quest-status button:hover{background:var(--black);color:#fff}
+.reveal-btn{border-color:var(--black);color:var(--black)}
+
+/* black accents on the play surfaces */
+.grip{background-image:radial-gradient(circle,var(--black) 1.4px,transparent 1.6px);opacity:.55}
+.tile:hover .grip,.power-card:hover .grip{opacity:.9}
+.metric-card{border-left-color:var(--black)}
+.why{border-left-color:var(--black)}
+.contact-copy{border-top:4px solid var(--black)}
+.hero-img{border-left-color:var(--black)}
+@media(max-width:930px){.hero-img{border-top-color:var(--black);border-left-color:transparent}}
+.metric-hero-unit{color:var(--ink)}
+.confetti i:nth-child(3n){background:var(--black)}
+
+/* v22: language toggle + brand capitalization fix */
+.eyebrow{text-transform:none;letter-spacing:.02em;font-size:.9rem}
+.metric-card .eyebrow,.unlock-card span{text-transform:none;letter-spacing:.06em}
+.lang-btn{font-weight:700}
+.lang-btn:hover{background:var(--black);color:#fff}
+@media(max-width:700px){.quest-status{flex-wrap:wrap;gap:6px}.lang-btn,.quest-status button{padding:7px 10px;font-size:.8rem}}

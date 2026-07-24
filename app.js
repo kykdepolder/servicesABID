@@ -18,6 +18,37 @@ function track(event,detail){
     if(typeof window.gtag==='function') window.gtag('event',event,detail||{});
   }catch(e){}
 }
+let LANG='en';
+try{const st=localStorage.getItem('abeam_quest_lang'); if(st==='id'||st==='en') LANG=st;}catch(e){}
+function dict(){return (window.I18N&&window.I18N[LANG])||{};}
+function t(k,vars){
+  const en=(window.I18N&&window.I18N.en&&window.I18N.en.ui)||{};
+  let v=(dict().ui&&dict().ui[k]!==undefined)?dict().ui[k]:en[k];
+  if(v===undefined) return '';
+  if(vars) Object.keys(vars).forEach(x=>{v=v.split('{'+x+'}').join(vars[x]);});
+  return v;
+}
+function tm(k){const m=(dict().msg)||window.I18N.en.msg;return m[k]!==undefined?m[k]:window.I18N.en.msg[k];}
+function tx(group,id,field,fallback){
+  const g=dict()[group];
+  if(g&&g[id]){const v=field?g[id][field]:g[id]; if(v!==undefined&&v!=='') return v;}
+  return fallback;
+}
+function locRole(r){return {id:r.id,service:r.service,label:tx('roles',r.id,'label',r.label),copy:tx('roles',r.id,'copy',r.copy)};}
+function locClue(c){return {id:c.id,service:c.service,icon:c.icon,label:tx('clues',c.id,null,c.label)};}
+function locService(sv){return Object.assign({},sv,{
+  name:tx('services',sv.id,'name',sv.name),
+  short:tx('services',sv.id,'short',sv.short),
+  next:tx('services',sv.id,'next',sv.next),
+  support:tx('services',sv.id,'support',sv.support)});}
+function locPower(m){return Object.assign({},m,{
+  title:tx('power',m.id,'title',m.title),
+  copy:tx('power',m.id,'copy',m.copy)});}
+function locFocus(f){return Object.assign({},f,{label:tx('focus',f.id,null,f.label)});}
+function locMetric(m,id){const o=Object.assign({},m);const g=dict().metrics;
+  if(g&&g[id]) Object.keys(g[id]).forEach(k=>{if(g[id][k]) o[k]=g[id][k];});
+  return o;}
+
 const $=id=>document.getElementById(id);
 const roles=[
   {id:'it',label:'IT',service:'core',copy:'systems, data, integration, and technology enablement'},
@@ -85,15 +116,80 @@ const roleMissionCopy={
 };
 function servicesForRole(){
   const ids=roleMissionMap[selectedRole]||data.services.map(s=>s.id);
-  return ids.map(id=>data.services.find(s=>s.id===id)).filter(Boolean);
+  return ids.map(id=>data.services.find(s=>s.id===id)).filter(Boolean).map(locService);
 }
 
 const serviceIconMap={}; data.services.forEach(s=>serviceIconMap[s.id]=s.icon);
-function serviceBy(id){return data.services.find(s=>s.id===id)||data.services[0];}
+function serviceBy(id){return locService(data.services.find(s=>s.id===id)||data.services[0]);}
+
+function applyStaticText(){
+  document.documentElement.lang = (LANG==='id'?'id':'en');
+  const set=(sel,val)=>{const el=document.querySelector(sel); if(el) el.textContent=val;};
+  const he=document.querySelector('#intro .eyebrow');
+  if(he) he.innerHTML=t('heroEyebrow')+' <strong>'+t('heroEyebrowStrong')+'</strong>';
+  set('#intro h1',t('heroTitle')); set('#intro .lede',t('heroLede'));
+  set('#startQuest',t('startQuest'));
+  set('#role .eyebrow',t('round1')); set('#role h2',t('roleTitle')); set('#role .head p:last-of-type',t('roleLede'));
+  set('#mission .eyebrow',t('round2')); set('#mission h2',t('missionTitle'));
+  set('#clueboard .eyebrow',t('round3')); set('#clueboard h2',t('clueTitle')); set('#clueboard .head p:last-of-type',t('clueLede'));
+  set('.tile-bank h3',t('clueBank')); set('.tile-bank > p',t('clueBankLede'));
+  set('.zone[data-zone="critical"] h3',t('zoneCritical')); set('.zone[data-zone="critical"] span',t('zoneCriticalSub'));
+  set('.zone[data-zone="important"] h3',t('zoneImportant')); set('.zone[data-zone="important"] span',t('zoneImportantSub'));
+  set('.zone[data-zone="not-relevant"] h3',t('zoneNot')); set('.zone[data-zone="not-relevant"] span',t('zoneNotSub'));
+  set('#power .eyebrow',t('round4')); set('#power h2',t('powerTitle')); set('#power .head p:last-of-type',t('powerLede'));
+  set('#continuePower',t('continue'));
+  set('#choice .eyebrow',t('roundFinal')); set('#choice h2',t('choiceTitle')); set('#choice .head p:last-of-type',t('choiceLede'));
+  set('#result .eyebrow',t('roundDone'));
+  set('.contact-copy h3',t('contactHead')); set('.contact-copy > p',t('contactLede'));
+  set('#copyMessage',t('copyMessage'));
+  set('#serviceLink',t('discuss')); set('#playAgain',t('playAgain'));
+  set('.unlock-card span',t('unlocked'));
+  set('#restartTop',t('restart'));
+  const lb=$('langToggle'); if(lb) lb.textContent=t('langToggle');
+  const rv=document.querySelector('.reveal-btn');
+  const cc=document.querySelector('.contact-copy');
+  if(rv&&cc) rv.textContent=cc.classList.contains('is-collapsed')?t('showMessage'):t('hideMessage');
+  const slot=$('powerSlot');
+  if(slot&&!slot.querySelector('.power-card')) slot.innerHTML='<h3>'+t('slotTitle')+'</h3><p>'+t('slotLede')+'</p>';
+  else if(slot){const h=slot.querySelector('h3'); if(h) h.textContent=t('slotTitle');}
+  updateProgressText();
+}
+function updateProgressText(){
+  const active=document.querySelector('.screen.active');
+  const id=active?active.id:'intro';
+  $('progressText').textContent = id==='intro'?t('questZero') : id==='result'?t('questDone') : t('questOf',{n:progress});
+}
+function setLang(next){
+  LANG=next;
+  try{localStorage.setItem('abeam_quest_lang',LANG);}catch(e){}
+  applyStaticText();
+  const active=document.querySelector('.screen.active');
+  const id=active?active.id:'intro';
+  if(id==='role') renderRoles();
+  else if(id==='mission') renderMissions();
+  else if(id==='clueboard'){
+    document.querySelectorAll('#clueboard .tile').forEach(el=>{
+      const h=el.querySelector('h4'); const cid=el.dataset.id;
+      if(h) h.textContent=tx('clues',cid,null,h.textContent);
+    });
+    setHint(t('hintStart')); updateZoneCounts();
+  }
+  else if(id==='power'){
+    document.querySelectorAll('.power-card').forEach(el=>{
+      const pid=el.dataset.id;
+      const h=el.querySelector('h3'), p=el.querySelector('p');
+      if(h){h.textContent=tx('power',pid,'title',h.textContent); el.dataset.title=h.textContent;}
+      if(p) p.textContent=tx('power',pid,'copy',p.textContent);
+    });
+  }
+  else if(id==='choice') renderFocus();
+  else if(id==='result') result(true);
+  track('quest_language',{language:LANG});
+}
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $(id).classList.add('active');
-  $('progressText').textContent=id==='intro'?'Quest 0/5':id==='result'?'Quest complete':'Quest '+progress+'/5';
+  updateProgressText();
   scrollToScreen(id);
   track('quest_step',{step_id:id,step_number:progress,role:selectedRoleLabel||'none'});
 }
@@ -111,7 +207,7 @@ function score(service,points){scores[service]=(scores[service]||0)+points;}
 function winner(){return data.services.reduce((a,b)=>(scores[b.id]>scores[a.id]?b:a),data.services[0]);}
 function img(src){return `<img src="${src}" alt=""/>`;}
 function renderRoles(){
-  $('roleGrid').innerHTML=roles.map((r,i)=>`<button class="role-card" data-role="${r.id}" data-service="${r.service}">${img(data.iconPool[i%data.iconPool.length])}<h3>${r.label}</h3><p>${r.copy}</p></button>`).join('');
+  $('roleGrid').innerHTML=roles.map(locRole).map((r,i)=>`<button class="role-card" data-role="${r.id}" data-service="${r.service}">${img(data.iconPool[i%data.iconPool.length])}<h3>${r.label}</h3><p>${r.copy}</p></button>`).join('');
   document.querySelectorAll('.role-card').forEach(btn=>btn.addEventListener('click',()=>{
     const role=roles.find(r=>r.id===btn.dataset.role);
     selectedRole=role.id; selectedRoleLabel=role.label; score(role.service,5); progress=2; show('mission'); renderMissions();
@@ -120,7 +216,7 @@ function renderRoles(){
 function renderMissions(){
   const services=servicesForRole();
   const intro=$('missionIntro');
-  if(intro){intro.textContent=roleMissionCopy[selectedRole]||'Pick the path that feels closest to your current transformation challenge.';}
+  if(intro){intro.textContent=(tx('roleMissionCopy',selectedRole,null,roleMissionCopy[selectedRole]))||'Pick the path that feels closest to your current transformation challenge.';}
   $('missionGrid').innerHTML=services.map((s,i)=>`<button class="service-card role-adjusted" data-service="${s.id}">${img(data.iconPool[(i+1)%data.iconPool.length])}<h3>${s.name}</h3><p>${s.short}</p></button>`).join('');
   document.querySelectorAll('.service-card').forEach(btn=>btn.addEventListener('click',()=>{score(btn.dataset.service,4);progress=3;show('clueboard');renderClues();}));
 }
@@ -129,8 +225,8 @@ function roleAwareClues(){
   return base.slice(0,6).map((c,i)=>({ ...c, icon: data.iconPool[i%data.iconPool.length] }));
 }
 function renderClues(){
-  $('clueBank').innerHTML=roleAwareClues().map(c=>`<div class="tile" data-id="${c.id}" data-service="${c.service}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(c.icon)}<h4>${c.label}</h4></div>`).join('');
-  bindTiles(); setHint('Tap a card to pick it up, or drag it straight into a zone.'); updateZoneCounts();
+  $('clueBank').innerHTML=roleAwareClues().map(locClue).map(c=>`<div class="tile" data-id="${c.id}" data-service="${c.service}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(c.icon)}<h4>${c.label}</h4></div>`).join('');
+  bindTiles(); setHint(t('hintStart')); updateZoneCounts();
 }
 function setHint(msg,active){
   let el=document.getElementById('boardHint');
@@ -144,15 +240,15 @@ function updateZoneCounts(){
     let c=z.querySelector('.zone-count');
     if(!c){c=document.createElement('b');c.className='zone-count';z.appendChild(c);}
     const n=z.querySelectorAll('.tile').length;
-    c.textContent=n===0?'empty':n+(n===1?' card':' cards');
+    c.textContent=n===0?t('zoneEmpty'):(n===1?t('zoneOne',{n:n}):t('zoneMany',{n:n}));
   });
   const left=document.querySelectorAll('#clueBank .tile').length;
-  const btn=$('lockBoard'); if(btn) btn.textContent=left>0?'Lock clue board ('+left+' left)':'Lock clue board';
+  const btn=$('lockBoard'); if(btn) btn.textContent=left>0?t('lockBoardLeft',{n:left}):t('lockBoard');
 }
 function keyActivate(el,fn){el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){e.preventDefault();fn(e);}});}
-function bindTiles(){document.querySelectorAll('.tile').forEach(item=>{keyActivate(item,()=>item.click());item.addEventListener('click',e=>{if(selectedTile)selectedTile.classList.remove('selected');selectedTile=item;item.classList.add('selected');setHint('Picked up. Now tap Critical, Important, or Not relevant.',true);e.stopPropagation();});item.addEventListener('pointerdown',startTileDrag);});document.querySelectorAll('.zone').forEach(z=>{z.setAttribute('tabindex','0');z.setAttribute('role','button');keyActivate(z,()=>z.click());});
-document.querySelectorAll('.zone').forEach(z=>z.addEventListener('click',()=>{if(selectedTile){z.appendChild(selectedTile);selectedTile.classList.remove('selected');selectedTile=null;setHint('Placed. Pick the next card.');updateZoneCounts();}}));}
-function startTileDrag(e){startDrag(e,'.zone',(item,zone)=>{zone.appendChild(item);setHint('Placed. Pick the next card.');updateZoneCounts();});}
+function bindTiles(){document.querySelectorAll('.tile').forEach(item=>{keyActivate(item,()=>item.click());item.addEventListener('click',e=>{if(selectedTile)selectedTile.classList.remove('selected');selectedTile=item;item.classList.add('selected');setHint(t('hintHolding'),true);e.stopPropagation();});item.addEventListener('pointerdown',startTileDrag);});document.querySelectorAll('.zone').forEach(z=>{z.setAttribute('tabindex','0');z.setAttribute('role','button');keyActivate(z,()=>z.click());});
+document.querySelectorAll('.zone').forEach(z=>z.addEventListener('click',()=>{if(selectedTile){z.appendChild(selectedTile);selectedTile.classList.remove('selected');selectedTile=null;setHint(t('hintPlaced'));updateZoneCounts();}}));}
+function startTileDrag(e){startDrag(e,'.zone',(item,zone)=>{zone.appendChild(item);setHint(t('hintPlaced'));updateZoneCounts();});}
 function startPowerDrag(e){startDrag(e,'.power-slot',(item,slot)=>choosePower(item));}
 function startDrag(e,targetSelector,onDrop){if(e.button!==undefined&&e.button!==0)return;const item=e.currentTarget;const rect=item.getBoundingClientRect();const offX=e.clientX-rect.left,offY=e.clientY-rect.top;const originalParent=item.parentElement,next=item.nextSibling;item.classList.add('dragging');item.style.width=rect.width+'px';item.style.left=rect.left+'px';item.style.top=rect.top+'px';document.body.appendChild(item);function move(ev){item.style.left=(ev.clientX-offX)+'px';item.style.top=(ev.clientY-offY)+'px';document.querySelectorAll(targetSelector).forEach(z=>z.classList.remove('over'));const over=document.elementFromPoint(ev.clientX,ev.clientY)?.closest(targetSelector);if(over)over.classList.add('over');}function up(ev){document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);item.classList.remove('dragging');item.style.left=item.style.top=item.style.width='';const over=document.elementFromPoint(ev.clientX,ev.clientY)?.closest(targetSelector);document.querySelectorAll(targetSelector).forEach(z=>z.classList.remove('over'));if(over){onDrop(item,over);}else if(next){originalParent.insertBefore(item,next)}else{originalParent.appendChild(item)}}document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);}
 function scoreBoard(){document.querySelectorAll('.zone').forEach(z=>{const pts=z.dataset.zone==='critical'?5:z.dataset.zone==='important'?3:0;z.querySelectorAll('.tile').forEach(t=>score(t.dataset.service,pts));});}
@@ -192,7 +288,7 @@ function roleAwarePowerMoves(){
   const list=roleMoves[selectedRole]||data.powerMoves.slice(0,4);
   return list.map((m,i)=>({...m,icon:data.iconPool[(i+2)%data.iconPool.length]}));
 }
-function renderPower(){chosenPower=null;$('continuePower').disabled=true;$('powerSlot').innerHTML='<h3>My next move</h3><p>Drop one action card here.</p>';$('powerDeck').innerHTML=roleAwarePowerMoves().map(m=>`<div class="power-card" data-id="${m.id}" data-service="${m.service}" data-title="${m.title}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(m.icon)}<h3>${m.title}</h3><p>${m.copy}</p></div>`).join('');document.querySelectorAll('.power-card').forEach(card=>{keyActivate(card,()=>card.click());card.addEventListener('pointerdown',startPowerDrag);card.addEventListener('click',()=>{if(selectedPower)selectedPower.classList.remove('selected');selectedPower=card;card.classList.add('selected');});});const slot=$('powerSlot');slot.setAttribute('tabindex','0');slot.setAttribute('role','button');
+function renderPower(){chosenPower=null;$('continuePower').disabled=true;$('powerSlot').innerHTML='<h3>'+t('slotTitle')+'</h3><p>'+t('slotLede')+'</p>';$('powerDeck').innerHTML=roleAwarePowerMoves().map(locPower).map(m=>`<div class="power-card" data-id="${m.id}" data-service="${m.service}" data-title="${m.title}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(m.icon)}<h3>${m.title}</h3><p>${m.copy}</p></div>`).join('');document.querySelectorAll('.power-card').forEach(card=>{keyActivate(card,()=>card.click());card.addEventListener('pointerdown',startPowerDrag);card.addEventListener('click',()=>{if(selectedPower)selectedPower.classList.remove('selected');selectedPower=card;card.classList.add('selected');});});const slot=$('powerSlot');slot.setAttribute('tabindex','0');slot.setAttribute('role','button');
 slot.onclick=()=>{if(selectedPower)choosePower(selectedPower);};keyActivate(slot,()=>slot.click());}
 function choosePower(card){if(chosenPower)return;chosenPower={id:card.dataset.id,title:card.dataset.title,service:card.dataset.service};score(card.dataset.service,3);card.classList.remove('selected');$('powerSlot').innerHTML='<h3>My next move</h3>';$('powerSlot').appendChild(card);$('continuePower').disabled=false;confetti(18);}
 function roleAwareFocusChoices(){
@@ -305,12 +401,12 @@ const roleMetricOverride={
 };
 function metricFor(service){
   const id=(service&&service.id)||'process';
-  return serviceMetrics[id]||serviceMetrics.process;
+  return locMetric(serviceMetrics[id]||serviceMetrics.process, serviceMetrics[id]?id:'process');
 }
 function renderMetric(service){
   const metric=metricFor(service);
   const eyebrow=document.querySelector('#metricCard .eyebrow');
-  if(eyebrow) eyebrow.textContent=metric.kind==='approach'?'How this is being approached':'Measurable outcome';
+  if(eyebrow) eyebrow.textContent=metric.kind==='approach'?t('eyebrowApproach'):t('eyebrowOutcome');
   $('metricTitle').textContent=metric.title;
   $('metricValue').innerHTML=
     '<div class="metric-hero"><span class="metric-hero-num">'+metric.hero+'</span>'+
@@ -319,17 +415,23 @@ function renderMetric(service){
     '<p class="metric-detail">'+metric.context+'</p>';
   $('metricFormula').textContent=metric.formula;
   const link=$('insightLink');
-  if(link){link.href=addUtm(metric.url,'insight_'+((service&&service.id)||'unknown'));link.textContent=metric.linkText||'Read the case';link.target='_blank';link.rel='noopener';}
+  if(link){link.href=addUtm(metric.url,'insight_'+((service&&service.id)||'unknown'));link.textContent=metric.linkText||t('readInsight');link.target='_blank';link.rel='noopener';}
   return metric;
 }
 
 function buildMessage(service,critical){
-  const roleText=selectedRoleLabel||'Not specified';
-  const moveText=chosenPower?.title||'Not specified';
-  const clues=critical.length?critical.join('; '):'Not specified';
-  return `Hello ABeam Consulting Indonesia team,\n\nI completed the Transformation Quest and would like to discuss the recommended support.\n\nMy role/lens: ${roleText}\nRecommended service: ${service.id==='core'?'Core Systems Transformation':service.name}\nMain clues I marked as critical: ${clues}\nPreferred next move: ${moveText}\n\nI would like to understand what an initial discussion or assessment could look like for this situation.\n\nThank you.`;
+  const rObj=roles.find(r=>r.id===selectedRole);
+  const roleText=rObj?tx('roles',rObj.id,'label',rObj.label):(selectedRoleLabel||t('notSpecified'));
+  const moveText=(chosenPower&&chosenPower.title)||t('notSpecified');
+  const clues=critical.length?critical.join('; '):t('notSpecified');
+  return tm('greeting')+'\n\n'+tm('intro')+'\n\n'+
+    tm('role')+': '+roleText+'\n'+
+    tm('service')+': '+service.name+'\n'+
+    tm('clues')+': '+clues+'\n'+
+    tm('move')+': '+moveText+'\n\n'+
+    tm('close')+'\n\n'+tm('thanks');
 }
-function result(){
+function result(quiet){
   const s=winner();
   $('resultTitle').textContent=s.name;
   $('resultSummary').textContent=s.short;
@@ -338,32 +440,38 @@ function result(){
   $('serviceLink').href=addUtm(contactUrl,'result_'+s.id);
   track('quest_complete',{recommended_service:s.id,role:selectedRoleLabel||'none',next_move:(chosenPower&&chosenPower.title)||'none'});
   const critical=[...document.querySelectorAll('.zone[data-zone="critical"] .tile h4')].map(x=>x.textContent).slice(0,3);
-  $('why').innerHTML='<strong>Why this unlocked:</strong><ul>'+(critical.map(c=>'<li>'+c+'</li>').join('')||'<li>Your role, mission, clue sorting, and power move pointed here.</li>')+'</ul>';
-  $('recommend').innerHTML='<strong>Suggested next move:</strong> '+s.next+'<br><br><strong>Suggested ABeam service:</strong> '+s.support;
+  $('why').innerHTML='<strong>'+t('whyHead')+'</strong><ul>'+(critical.map(c=>'<li>'+c+'</li>').join('')||'<li>'+t('whyFallback')+'</li>')+'</ul>';
+  $('recommend').innerHTML='<strong>'+t('nextMove')+'</strong> '+s.next+'<br><br><strong>'+t('suggestedService')+'</strong> '+s.support;
   try{renderMetric(s);}catch(err){console.error('Metric render failed',err);}
-  try{$('contactMessage').value=buildMessage(s,critical);}catch(err){console.error('Message build failed',err);$('contactMessage').value='Hello ABeam Consulting Indonesia team, I completed the Transformation Quest and would like to discuss the recommended support.';}
+  try{$('contactMessage').value=buildMessage(s,critical);}catch(err){console.error('Message build failed',err);$('contactMessage').value=t('msgFallback');}
   collapseContact();
-  show('result');
-  confetti(44);
+  if(!quiet){show('result');confetti(44);}else{applyStaticText();}
 }
 function collapseContact(){
   const cc=document.querySelector('.contact-copy');
   if(!cc||cc.dataset.wired) return;
   cc.dataset.wired='1';
-  cc.classList.add('is-collapsed');
+  cc.classList.remove('is-collapsed');
   const btn=document.createElement('button');
   btn.type='button'; btn.className='ghost-btn reveal-btn';
-  btn.textContent='Show message for the contact form';
+  btn.textContent=t('hideMessage');
   cc.parentNode.insertBefore(btn,cc);
   btn.onclick=()=>{
     const closed=cc.classList.toggle('is-collapsed');
-    btn.textContent=closed?'Show message for the contact form':'Hide message';
+    btn.textContent=closed?t('showMessage'):t('hideMessage');
     if(!closed) cc.scrollIntoView({behavior:'smooth',block:'nearest'});
   };
 }
 function confetti(n=30){const wrap=document.createElement('div');wrap.className='confetti';document.body.appendChild(wrap);for(let i=0;i<n;i++){const c=document.createElement('i');c.style.left=Math.random()*100+'vw';c.style.top='-20px';c.style.background=i%2?'#7d6e5a':'#001964';c.style.animationDelay=Math.random()*0.35+'s';wrap.appendChild(c);}setTimeout(()=>wrap.remove(),1500);}
-$('startQuest').onclick=()=>{progress=1;show('role');renderRoles();};$('restartTop').onclick=()=>location.reload();$('playAgain').onclick=()=>location.reload();$('lockBoard').onclick=()=>{scoreBoard();progress=4;show('power');renderPower();};$('continuePower').onclick=()=>{progress=5;show('choice');renderFocus();};$('copyMessage').onclick=async()=>{try{await navigator.clipboard.writeText($('contactMessage').value);$('copyStatus').textContent='Copied';}catch(e){$('contactMessage').select();document.execCommand('copy');$('copyStatus').textContent='Copied';}track('quest_copy_message',{});};
+$('startQuest').onclick=()=>{progress=1;show('role');renderRoles();};$('restartTop').onclick=()=>location.reload();$('playAgain').onclick=()=>location.reload();$('lockBoard').onclick=()=>{scoreBoard();progress=4;show('power');renderPower();};$('continuePower').onclick=()=>{progress=5;show('choice');renderFocus();};$('copyMessage').onclick=async()=>{try{await navigator.clipboard.writeText($('contactMessage').value);$('copyStatus').textContent=t('copied');}catch(e){$('contactMessage').select();document.execCommand('copy');$('copyStatus').textContent=t('copied');}track('quest_copy_message',{});};
 
 
 document.addEventListener('click',e=>{const finalChoice=e.target.closest&&e.target.closest('.final-choice');if(finalChoice){e.preventDefault();selectFinal(finalChoice.dataset.service);}});
 document.addEventListener('touchend',e=>{const finalChoice=e.target.closest&&e.target.closest('.final-choice');if(finalChoice){e.preventDefault();selectFinal(finalChoice.dataset.service);}}, {passive:false});
+
+/* language toggle + first paint */
+(function(){
+  const b=$('langToggle');
+  if(b) b.onclick=()=>setLang(LANG==='id'?'en':'id');
+  applyStaticText();
+})();
