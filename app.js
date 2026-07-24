@@ -204,7 +204,7 @@ function scrollToScreen(id){
   });
 }
 function score(service,points){scores[service]=(scores[service]||0)+points;}
-function winner(){return data.services.reduce((a,b)=>(scores[b.id]>scores[a.id]?b:a),data.services[0]);}
+function winner(){return locService(data.services.reduce((a,b)=>(scores[b.id]>scores[a.id]?b:a),data.services[0]));}
 function img(src){return `<img src="${src}" alt=""/>`;}
 function renderRoles(){
   $('roleGrid').innerHTML=roles.map(locRole).map((r,i)=>`<button class="role-card" data-role="${r.id}" data-service="${r.service}">${img(data.iconPool[i%data.iconPool.length])}<h3>${r.label}</h3><p>${r.copy}</p></button>`).join('');
@@ -216,7 +216,7 @@ function renderRoles(){
 function renderMissions(){
   const services=servicesForRole();
   const intro=$('missionIntro');
-  if(intro){intro.textContent=(tx('roleMissionCopy',selectedRole,null,roleMissionCopy[selectedRole]))||'Pick the path that feels closest to your current transformation challenge.';}
+  if(intro){intro.textContent=(tx('roleMissionCopy',selectedRole,null,roleMissionCopy[selectedRole]))||t('missionLede');}
   $('missionGrid').innerHTML=services.map((s,i)=>`<button class="service-card role-adjusted" data-service="${s.id}">${img(data.iconPool[(i+1)%data.iconPool.length])}<h3>${s.name}</h3><p>${s.short}</p></button>`).join('');
   document.querySelectorAll('.service-card').forEach(btn=>btn.addEventListener('click',()=>{score(btn.dataset.service,4);progress=3;show('clueboard');renderClues();}));
 }
@@ -290,12 +290,12 @@ function roleAwarePowerMoves(){
 }
 function renderPower(){chosenPower=null;$('continuePower').disabled=true;$('powerSlot').innerHTML='<h3>'+t('slotTitle')+'</h3><p>'+t('slotLede')+'</p>';$('powerDeck').innerHTML=roleAwarePowerMoves().map(locPower).map(m=>`<div class="power-card" data-id="${m.id}" data-service="${m.service}" data-title="${m.title}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(m.icon)}<h3>${m.title}</h3><p>${m.copy}</p></div>`).join('');document.querySelectorAll('.power-card').forEach(card=>{keyActivate(card,()=>card.click());card.addEventListener('pointerdown',startPowerDrag);card.addEventListener('click',()=>{if(selectedPower)selectedPower.classList.remove('selected');selectedPower=card;card.classList.add('selected');});});const slot=$('powerSlot');slot.setAttribute('tabindex','0');slot.setAttribute('role','button');
 slot.onclick=()=>{if(selectedPower)choosePower(selectedPower);};keyActivate(slot,()=>slot.click());}
-function choosePower(card){if(chosenPower)return;chosenPower={id:card.dataset.id,title:card.dataset.title,service:card.dataset.service};score(card.dataset.service,3);card.classList.remove('selected');$('powerSlot').innerHTML='<h3>My next move</h3>';$('powerSlot').appendChild(card);$('continuePower').disabled=false;confetti(18);}
+function choosePower(card){if(chosenPower)return;chosenPower={id:card.dataset.id,title:card.dataset.title,service:card.dataset.service};score(card.dataset.service,3);card.classList.remove('selected');$('powerSlot').innerHTML='<h3>'+t('slotTitle')+'</h3>';$('powerSlot').appendChild(card);$('continuePower').disabled=false;confetti(18);}
 function roleAwareFocusChoices(){
   const list=[...data.focusChoices];
   if(selectedRole==='it') list.unshift({id:'secure',label:'Make systems easier to connect',service:'core'});
   if(selectedRole==='finance') list.unshift({id:'control',label:'Make reporting and controls cleaner',service:'process'});
-  if(selectedRole==='hr') list.unshift({id:'adopt',label:'Make the change easier to adopt',service:'people'});
+  if(selectedRole==='hr') list.unshift({id:'adopt',label:'Build readiness across teams',service:'people'});
   if(selectedRole==='supply') list.unshift({id:'visible',label:'Make the supply chain easier to see',service:'supply'});
   if(selectedRole==='process') list.unshift({id:'simple',label:'Make the workflow simpler',service:'process'});
   return list.slice(0,4);
@@ -314,7 +314,7 @@ function selectFinal(serviceId){
       document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
       resultScreen.classList.add('active');
       $('resultTitle').textContent='Result ready';
-      $('resultSummary').textContent='Your selected path has been captured. Please restart if the result details do not load.';
+      $('resultSummary').textContent=t('resultFallback');
     }
   }
 }
@@ -322,7 +322,7 @@ window.selectFinal=selectFinal;
 
 function renderFocus(){
   const choices=roleAwareFocusChoices();
-  $('focusGrid').innerHTML=choices.map(t=>`<button type="button" class="trade-card final-choice" data-service="${t.service}" onclick="selectFinal('${t.service}')"><h3>${t.label}</h3><p>Pick the action that would make the biggest difference right now.</p></button>`).join('');
+  $('focusGrid').innerHTML=choices.map(locFocus).map(c=>`<button type="button" class="trade-card final-choice" data-service="${c.service}" onclick="selectFinal('${c.service}')"><h3>${c.label}</h3></button>`).join('');
   document.querySelectorAll('.final-choice').forEach(btn=>{
     btn.onclick=(e)=>{e.preventDefault();selectFinal(btn.dataset.service);};
     btn.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectFinal(btn.dataset.service);}};
