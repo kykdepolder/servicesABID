@@ -60,43 +60,33 @@ const roles=[
 const roleClues={
   it:[
     {id:'it1',label:'Systems are not connected',service:'core'},
-    {id:'it2',label:'Data is hard to trust',service:'core'},
     {id:'it3',label:'Users need better adoption',service:'people'},
     {id:'it4',label:'Process gaps slow the rollout',service:'process'},
-    {id:'it5',label:'Support model needs more stability',service:'managed'},
-    {id:'it6',label:'Security or access creates friction',service:'core'}
+    {id:'it5',label:'Support model needs more stability',service:'managed'}
   ],
   finance:[
     {id:'fin1',label:'Reporting takes too long',service:'process'},
     {id:'fin2',label:'Cost visibility is limited',service:'strategy'},
-    {id:'fin3',label:'Manual checks create rework',service:'process'},
     {id:'fin4',label:'Controls need stronger consistency',service:'core'},
-    {id:'fin5',label:'Operations need cleaner ownership',service:'managed'},
-    {id:'fin6',label:'Budget decisions lack a clear value case',service:'strategy'}
+    {id:'fin5',label:'Operations need cleaner ownership',service:'managed'}
   ],
   hr:[
     {id:'hr1',label:'Employee experience is inconsistent',service:'people'},
-    {id:'hr2',label:'Capability gaps slow change',service:'people'},
     {id:'hr3',label:'Workforce data is fragmented',service:'core'},
     {id:'hr4',label:'Processes are difficult to follow',service:'process'},
-    {id:'hr5',label:'Change ownership is unclear',service:'strategy'},
-    {id:'hr6',label:'HR service requests take too long',service:'process'}
+    {id:'hr5',label:'Change ownership is unclear',service:'strategy'}
   ],
   supply:[
     {id:'sc1',label:'Delivery reliability is under pressure',service:'supply'},
-    {id:'sc2',label:'Inventory visibility is limited',service:'supply'},
     {id:'sc3',label:'Planning decisions are too reactive',service:'strategy'},
     {id:'sc4',label:'Procurement or logistics data is fragmented',service:'core'},
-    {id:'sc5',label:'Daily operations need more stability',service:'managed'},
-    {id:'sc6',label:'Supplier risk is hard to anticipate',service:'supply'}
+    {id:'sc5',label:'Daily operations need more stability',service:'managed'}
   ],
   process:[
     {id:'bp1',label:'Manual work keeps returning',service:'process'},
-    {id:'bp2',label:'Approvals take too long',service:'process'},
     {id:'bp3',label:'Teams use different ways of working',service:'people'},
     {id:'bp4',label:'Data does not support decisions',service:'core'},
-    {id:'bp5',label:'Business value is hard to measure',service:'strategy'},
-    {id:'bp6',label:'Exceptions are handled outside the process',service:'managed'}
+    {id:'bp5',label:'Business value is hard to measure',service:'strategy'}
   ]
 };
 
@@ -130,13 +120,12 @@ function applyStaticText(){
   set('#intro h1',t('heroTitle')); set('#intro .lede',t('heroLede'));
   set('#startQuest',t('startQuest'));
   set('#role .eyebrow',t('round1')); set('#role h2',t('roleTitle')); set('#role .head p:last-of-type',t('roleLede'));
-  set('#mission .eyebrow',t('round2')); set('#mission h2',t('missionTitle'));
-  set('#clueboard .eyebrow',t('round3')); set('#clueboard h2',t('clueTitle')); set('#clueboard .head p:last-of-type',t('clueLede'));
+  set('#clueboard .eyebrow',t('round2')); set('#clueboard h2',t('clueTitle')); set('#clueboard .head p:last-of-type',t('clueLede'));
   set('.tile-bank h3',t('clueBank')); set('.tile-bank > p',t('clueBankLede'));
   set('.zone[data-zone="critical"] h3',t('zoneCritical')); set('.zone[data-zone="critical"] span',t('zoneCriticalSub'));
   set('.zone[data-zone="important"] h3',t('zoneImportant')); set('.zone[data-zone="important"] span',t('zoneImportantSub'));
   set('.zone[data-zone="not-relevant"] h3',t('zoneNot')); set('.zone[data-zone="not-relevant"] span',t('zoneNotSub'));
-  set('#power .eyebrow',t('round4')); set('#power h2',t('powerTitle')); set('#power .head p:last-of-type',t('powerLede'));
+  set('#power .eyebrow',t('round3')); set('#power h2',t('powerTitle')); set('#power .head p:last-of-type',t('powerLede'));
   set('#continuePower',t('continue'));
   set('#choice .eyebrow',t('roundFinal')); set('#choice h2',t('choiceTitle')); set('#choice .head p:last-of-type',t('choiceLede'));
   set('#result .eyebrow',t('roundDone'));
@@ -166,13 +155,12 @@ function setLang(next){
   const active=document.querySelector('.screen.active');
   const id=active?active.id:'intro';
   if(id==='role') renderRoles();
-  else if(id==='mission') renderMissions();
   else if(id==='clueboard'){
     document.querySelectorAll('#clueboard .tile').forEach(el=>{
       const h=el.querySelector('h4'); const cid=el.dataset.id;
       if(h) h.textContent=tx('clues',cid,null,h.textContent);
     });
-    setHint(t('hintStart')); updateZoneCounts();
+    setHint(''); updateZoneCounts();
   }
   else if(id==='power'){
     document.querySelectorAll('.power-card').forEach(el=>{
@@ -210,23 +198,16 @@ function renderRoles(){
   $('roleGrid').innerHTML=roles.map(locRole).map((r,i)=>`<button class="role-card" data-role="${r.id}" data-service="${r.service}">${img(data.iconPool[i%data.iconPool.length])}<h3>${r.label}</h3><p>${r.copy}</p></button>`).join('');
   document.querySelectorAll('.role-card').forEach(btn=>btn.addEventListener('click',()=>{
     const role=roles.find(r=>r.id===btn.dataset.role);
-    selectedRole=role.id; selectedRoleLabel=role.label; score(role.service,5); progress=2; show('mission'); renderMissions();
+    selectedRole=role.id; selectedRoleLabel=role.label; score(role.service,6); progress=2; show('clueboard'); renderClues();
   }));
 }
-function renderMissions(){
-  const services=servicesForRole();
-  const intro=$('missionIntro');
-  if(intro){intro.textContent=(tx('roleMissionCopy',selectedRole,null,roleMissionCopy[selectedRole]))||t('missionLede');}
-  $('missionGrid').innerHTML=services.map((s,i)=>`<button class="service-card role-adjusted" data-service="${s.id}">${img(data.iconPool[(i+1)%data.iconPool.length])}<h3>${s.name}</h3><p>${s.short}</p></button>`).join('');
-  document.querySelectorAll('.service-card').forEach(btn=>btn.addEventListener('click',()=>{score(btn.dataset.service,4);progress=3;show('clueboard');renderClues();}));
-}
 function roleAwareClues(){
-  const base=roleClues[selectedRole]||data.clues.slice(0,6);
-  return base.slice(0,6).map((c,i)=>({ ...c, icon: data.iconPool[i%data.iconPool.length] }));
+  const base=roleClues[selectedRole]||data.clues.slice(0,4);
+  return base.slice(0,4).map((c,i)=>({ ...c, icon: data.iconPool[i%data.iconPool.length] }));
 }
 function renderClues(){
   $('clueBank').innerHTML=roleAwareClues().map(locClue).map(c=>`<div class="tile" data-id="${c.id}" data-service="${c.service}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(c.icon)}<h4>${c.label}</h4></div>`).join('');
-  bindTiles(); setHint(t('hintStart')); updateZoneCounts();
+  bindTiles(); setHint(''); updateZoneCounts();
 }
 function setHint(msg,active){
   let el=document.getElementById('boardHint');
@@ -234,6 +215,7 @@ function setHint(msg,active){
     el=document.createElement('p');el.id='boardHint';el.className='board-hint';
     board.parentNode.insertBefore(el,board);}
   el.textContent=msg; el.classList.toggle('is-active',!!active);
+  el.style.display=msg?'':'none';
 }
 function updateZoneCounts(){
   document.querySelectorAll('#clueboard .zone').forEach(z=>{
@@ -329,7 +311,7 @@ function selectFinal(serviceId){
   try{
     if(!serviceId){return;}
     score(serviceId,4);
-    progress=5;
+    progress=4;
     result();
   }catch(err){
     console.error('Final choice failed', err);
@@ -438,7 +420,6 @@ function renderMetric(service){
     '<p class="metric-hero-label">'+metric.heroLabel+'</p>'+
     '<p class="metric-detail">'+metric.context+'</p>'+
     '<p class="metric-disclaimer">'+t('caseDisclaimer')+'</p>';
-  $('metricFormula').textContent=metric.formula;
   const link=$('insightLink');
   if(link){link.href=addUtm(metric.url,'insight_'+((service&&service.id)||'unknown'));link.textContent=metric.linkText||t('readInsight');link.target='_blank';link.rel='noopener';}
   return metric;
@@ -491,7 +472,7 @@ function collapseContact(){
   };
 }
 function confetti(n=30){const wrap=document.createElement('div');wrap.className='confetti';document.body.appendChild(wrap);for(let i=0;i<n;i++){const c=document.createElement('i');c.style.left=Math.random()*100+'vw';c.style.top='-20px';c.style.background=i%2?'#7d6e5a':'#001964';c.style.animationDelay=Math.random()*0.35+'s';wrap.appendChild(c);}setTimeout(()=>wrap.remove(),1500);}
-$('startQuest').onclick=()=>{progress=1;show('role');renderRoles();};$('restartTop').onclick=()=>location.reload();$('playAgain').onclick=()=>location.reload();$('lockBoard').onclick=()=>{scoreBoard();progress=4;show('power');renderPower();};$('continuePower').onclick=()=>{progress=5;show('choice');renderFocus();};$('copyMessage').onclick=async()=>{try{await navigator.clipboard.writeText($('contactMessage').value);$('copyStatus').textContent=t('copied');}catch(e){$('contactMessage').select();document.execCommand('copy');$('copyStatus').textContent=t('copied');}track('quest_copy_message',{});};
+$('startQuest').onclick=()=>{progress=1;show('role');renderRoles();};$('restartTop').onclick=()=>location.reload();$('playAgain').onclick=()=>location.reload();$('lockBoard').onclick=()=>{scoreBoard();progress=3;show('power');renderPower();};$('continuePower').onclick=()=>{progress=4;show('choice');renderFocus();};$('copyMessage').onclick=async()=>{try{await navigator.clipboard.writeText($('contactMessage').value);$('copyStatus').textContent=t('copied');}catch(e){$('contactMessage').select();document.execCommand('copy');$('copyStatus').textContent=t('copied');}track('quest_copy_message',{});};
 
 
 document.addEventListener('click',e=>{const finalChoice=e.target.closest&&e.target.closest('.final-choice');if(finalChoice){e.preventDefault();selectFinal(finalChoice.dataset.service);}});
