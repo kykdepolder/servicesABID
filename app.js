@@ -208,12 +208,12 @@ function renderClues(){
   clueAnswers={};
   const rows=roleAwareClues().map(locClue);
   $('clueRows').innerHTML=rows.map(c=>`
-    <div class="clue-row" data-id="${c.id}" data-service="${c.service}" role="row">
-      <span class="clue-row-label">${img(c.icon)}<span class="row-text">${c.label}</span></span>
-      <label class="clue-cell"><input type="radio" name="clue-${c.id}" value="critical"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneCritical')}</span></label>
-      <label class="clue-cell"><input type="radio" name="clue-${c.id}" value="important"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneImportant')}</span></label>
-      <label class="clue-cell"><input type="radio" name="clue-${c.id}" value="not-relevant"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneNot')}</span></label>
-    </div>`).join('');
+    <tr class="clue-row" data-id="${c.id}" data-service="${c.service}">
+      <td class="clue-row-label">${img(c.icon)}<span class="row-text">${c.label}</span></td>
+      <td class="clue-cell"><label><input type="radio" name="clue-${c.id}" value="critical"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneCritical')}</span></label></td>
+      <td class="clue-cell"><label><input type="radio" name="clue-${c.id}" value="important"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneImportant')}</span></label></td>
+      <td class="clue-cell"><label><input type="radio" name="clue-${c.id}" value="not-relevant"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneNot')}</span></label></td>
+    </tr>`).join('');
   bindClueRows(); updateLockButton();
 }
 function bindClueRows(){
