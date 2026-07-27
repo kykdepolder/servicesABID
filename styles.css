@@ -246,3 +246,11 @@ body.is-dragging{overflow-x:hidden}
 }
 /* desktop: keep the two buttons from crowding the counter */
 .quest-status button{white-space:nowrap}
+
+/* ===== v26: case-study disclaimer + broken-image fallback ===== */
+.metric-disclaimer{font-size:.86rem;color:var(--darkbeige);font-style:italic;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,25,100,.18)}
+
+/* if an image file is ever missing, hide the broken-icon glyph instead of showing it */
+.unlock-card img.unlock-photo,.hero-img,img#resultIcon{background:var(--light)}
+img#resultIcon{color:transparent;font-size:0}
+.hero-img{background-color:var(--light)}

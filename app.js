@@ -436,7 +436,8 @@ function renderMetric(service){
     '<div class="metric-hero"><span class="metric-hero-num">'+metric.hero+'</span>'+
     '<span class="metric-hero-unit">'+metric.heroUnit+'</span></div>'+
     '<p class="metric-hero-label">'+metric.heroLabel+'</p>'+
-    '<p class="metric-detail">'+metric.context+'</p>';
+    '<p class="metric-detail">'+metric.context+'</p>'+
+    '<p class="metric-disclaimer">'+t('caseDisclaimer')+'</p>';
   $('metricFormula').textContent=metric.formula;
   const link=$('insightLink');
   if(link){link.href=addUtm(metric.url,'insight_'+((service&&service.id)||'unknown'));link.textContent=metric.linkText||t('readInsight');link.target='_blank';link.rel='noopener';}
@@ -461,7 +462,8 @@ function result(quiet){
   $('resultSummary').textContent=s.short;
   const svcImg={core:'img/core.jpg',process:'img/process.jpg',supply:'img/supply.jpg',people:'img/people.jpg',strategy:'img/strategy.jpg',managed:'img/managed.jpg'};
   const ri=$('resultIcon');
-  if(svcImg[s.id]){ri.src=svcImg[s.id];ri.classList.add('unlock-photo');}else{ri.src=s.icon;ri.classList.remove('unlock-photo');}
+  ri.onerror=function(){this.onerror=null;this.style.display='none';};
+  if(svcImg[s.id]){ri.style.display='';ri.src=svcImg[s.id];ri.classList.add('unlock-photo');}else{ri.style.display='';ri.src=s.icon;ri.classList.remove('unlock-photo');}
   $('resultCard').textContent=s.name;
   $('serviceLink').href=addUtm(contactUrl,'result_'+s.id);
   track('quest_complete',{recommended_service:s.id,role:selectedRoleLabel||'none',next_move:(chosenPower&&chosenPower.title)||'none'});
