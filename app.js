@@ -1,6 +1,6 @@
 const data=JSON.parse(document.getElementById('data').textContent);
 const scores={}; data.services.forEach(s=>scores[s.id]=0);
-let selectedTile=null, selectedPower=null, progress=0, chosenPower=null, selectedRole=null, selectedRoleLabel='';
+let selectedTile=null, selectedPower=null, progress=0, chosenPower=null, selectedRole=null, selectedRoleLabel='', clueAnswers={};
 const contactUrl='https://www.abeam.com/id/en/contact_id/';
 function addUtm(url,content){
   try{const u=new URL(url);
@@ -121,10 +121,9 @@ function applyStaticText(){
   set('#startQuest',t('startQuest'));
   set('#role .eyebrow',t('round1')); set('#role h2',t('roleTitle')); set('#role .head p:last-of-type',t('roleLede'));
   set('#clueboard .eyebrow',t('round2')); set('#clueboard h2',t('clueTitle')); set('#clueboard .head p:last-of-type',t('clueLede'));
-  set('.tile-bank h3',t('clueBank')); set('.tile-bank > p',t('clueBankLede'));
-  set('.zone[data-zone="critical"] h3',t('zoneCritical')); set('.zone[data-zone="critical"] span',t('zoneCriticalSub'));
-  set('.zone[data-zone="important"] h3',t('zoneImportant')); set('.zone[data-zone="important"] span',t('zoneImportantSub'));
-  set('.zone[data-zone="not-relevant"] h3',t('zoneNot')); set('.zone[data-zone="not-relevant"] span',t('zoneNotSub'));
+  set('.clue-col-head[data-zone="critical"] b',t('zoneCritical')); set('.clue-col-head[data-zone="critical"] small',t('zoneCriticalSub'));
+  set('.clue-col-head[data-zone="important"] b',t('zoneImportant')); set('.clue-col-head[data-zone="important"] small',t('zoneImportantSub'));
+  set('.clue-col-head[data-zone="not-relevant"] b',t('zoneNot')); set('.clue-col-head[data-zone="not-relevant"] small',t('zoneNotSub'));
   set('#power .eyebrow',t('round3')); set('#power h2',t('powerTitle')); set('#power .head p:last-of-type',t('powerLede'));
   set('#continuePower',t('continue'));
   set('#choice .eyebrow',t('roundFinal')); set('#choice h2',t('choiceTitle')); set('#choice .head p:last-of-type',t('choiceLede'));
@@ -156,11 +155,11 @@ function setLang(next){
   const id=active?active.id:'intro';
   if(id==='role') renderRoles();
   else if(id==='clueboard'){
-    document.querySelectorAll('#clueboard .tile').forEach(el=>{
-      const h=el.querySelector('h4'); const cid=el.dataset.id;
-      if(h) h.textContent=tx('clues',cid,null,h.textContent);
+    document.querySelectorAll('#clueRows .clue-row').forEach(el=>{
+      const rt=el.querySelector('.row-text'); const cid=el.dataset.id;
+      if(rt) rt.textContent=tx('clues',cid,null,rt.textContent);
     });
-    setHint(''); updateZoneCounts();
+    updateLockButton();
   }
   else if(id==='power'){
     document.querySelectorAll('.power-card').forEach(el=>{
@@ -206,31 +205,34 @@ function roleAwareClues(){
   return base.slice(0,4).map((c,i)=>({ ...c, icon: data.iconPool[i%data.iconPool.length] }));
 }
 function renderClues(){
-  $('clueBank').innerHTML=roleAwareClues().map(locClue).map(c=>`<div class="tile" data-id="${c.id}" data-service="${c.service}" tabindex="0" role="button"><span class="grip" aria-hidden="true"></span>${img(c.icon)}<h4>${c.label}</h4></div>`).join('');
-  bindTiles(); setHint(''); updateZoneCounts();
+  clueAnswers={};
+  const rows=roleAwareClues().map(locClue);
+  $('clueRows').innerHTML=rows.map(c=>`
+    <div class="clue-row" data-id="${c.id}" data-service="${c.service}" role="row">
+      <span class="clue-row-label">${img(c.icon)}<span class="row-text">${c.label}</span></span>
+      <label class="clue-cell"><input type="radio" name="clue-${c.id}" value="critical"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneCritical')}</span></label>
+      <label class="clue-cell"><input type="radio" name="clue-${c.id}" value="important"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneImportant')}</span></label>
+      <label class="clue-cell"><input type="radio" name="clue-${c.id}" value="not-relevant"><span class="cell-mark" aria-hidden="true"></span><span class="sr-only">${t('zoneNot')}</span></label>
+    </div>`).join('');
+  bindClueRows(); updateLockButton();
 }
-function setHint(msg,active){
-  let el=document.getElementById('boardHint');
-  if(!el){const board=document.querySelector('#clueboard .board-layout');if(!board)return;
-    el=document.createElement('p');el.id='boardHint';el.className='board-hint';
-    board.parentNode.insertBefore(el,board);}
-  el.textContent=msg; el.classList.toggle('is-active',!!active);
-  el.style.display=msg?'':'none';
-}
-function updateZoneCounts(){
-  document.querySelectorAll('#clueboard .zone').forEach(z=>{
-    let c=z.querySelector('.zone-count');
-    if(!c){c=document.createElement('b');c.className='zone-count';const anchor=z.querySelector('span');z.insertBefore(c,anchor?anchor.nextSibling:z.firstChild);}
-    const n=z.querySelectorAll('.tile').length;
-    c.textContent=n===0?t('zoneEmpty'):(n===1?t('zoneOne',{n:n}):t('zoneMany',{n:n}));
+function bindClueRows(){
+  document.querySelectorAll('#clueRows .clue-row').forEach(row=>{
+    row.querySelectorAll('input[type="radio"]').forEach(input=>{
+      input.addEventListener('change',()=>{
+        clueAnswers[row.dataset.id]=input.value;
+        row.classList.add('is-answered');
+        updateLockButton();
+      });
+    });
   });
-  const left=document.querySelectorAll('#clueBank .tile').length;
+}
+function updateLockButton(){
+  const total=document.querySelectorAll('#clueRows .clue-row').length;
+  const left=total-Object.keys(clueAnswers).length;
   const btn=$('lockBoard'); if(btn) btn.textContent=left>0?t('lockBoardLeft',{n:left}):t('lockBoard');
 }
 function keyActivate(el,fn){el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){e.preventDefault();fn(e);}});}
-function bindTiles(){document.querySelectorAll('.tile').forEach(item=>{keyActivate(item,()=>item.click());item.addEventListener('click',e=>{if(selectedTile)selectedTile.classList.remove('selected');selectedTile=item;item.classList.add('selected');setHint(t('hintHolding'),true);const z0=document.querySelector('.zone');if(z0&&window.innerWidth<=930)z0.scrollIntoView({behavior:'smooth',block:'center'});e.stopPropagation();});item.addEventListener('pointerdown',startTileDrag);});document.querySelectorAll('.zone').forEach(z=>{z.setAttribute('tabindex','0');z.setAttribute('role','button');keyActivate(z,()=>z.click());});
-document.querySelectorAll('.zone').forEach(z=>z.addEventListener('click',()=>{if(selectedTile){z.appendChild(selectedTile);selectedTile.classList.remove('selected');selectedTile=null;setHint(t('hintPlaced'));updateZoneCounts();}}));}
-function startTileDrag(e){startDrag(e,'.zone,.tile-bank',(item,target)=>{const dest=target.classList.contains('tile-bank')?$('clueBank'):target;dest.appendChild(item);setHint(t('hintPlaced'));updateZoneCounts();});}
 function startPowerDrag(e){startDrag(e,'.power-slot',(item,slot)=>choosePower(item));}
 function nearestTarget(selector,x,y,maxDist){
   let best=null,bestD=Infinity;
@@ -257,7 +259,14 @@ function edgeScroll(clientY){
 }
 function stopEdgeScroll(){if(_edgeTimer){clearInterval(_edgeTimer);_edgeTimer=null;}}
 function startDrag(e,targetSelector,onDrop){if(e.button!==undefined&&e.button!==0)return;const item=e.currentTarget;const rect=item.getBoundingClientRect();const offX=e.clientX-rect.left,offY=e.clientY-rect.top;const originalParent=item.parentElement,originalIndex=[...originalParent.children].indexOf(item);item.classList.add('dragging');item.style.width=rect.width+'px';item.style.left=rect.left+'px';item.style.top=rect.top+'px';document.body.appendChild(item);function move(ev){edgeScroll(ev.clientY);item.style.left=(ev.clientX-offX)+'px';item.style.top=(ev.clientY-offY)+'px';document.querySelectorAll(targetSelector).forEach(z=>z.classList.remove('over'));const over=document.elementFromPoint(ev.clientX,ev.clientY)?.closest(targetSelector)||nearestTarget(targetSelector,ev.clientX,ev.clientY,90);if(over)over.classList.add('over');}function up(ev){stopEdgeScroll();document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);item.classList.remove('dragging');item.style.left=item.style.top=item.style.width='';const over=document.elementFromPoint(ev.clientX,ev.clientY)?.closest(targetSelector)||nearestTarget(targetSelector,ev.clientX,ev.clientY,90);document.querySelectorAll(targetSelector).forEach(z=>z.classList.remove('over'));if(over){onDrop(item,over);}else{const kids=originalParent.children;if(originalIndex>=kids.length)originalParent.appendChild(item);else originalParent.insertBefore(item,kids[originalIndex]);}}document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);}
-function scoreBoard(){document.querySelectorAll('.zone').forEach(z=>{const pts=z.dataset.zone==='critical'?5:z.dataset.zone==='important'?3:0;z.querySelectorAll('.tile').forEach(t=>score(t.dataset.service,pts));});}
+function scoreBoard(){
+  Object.entries(clueAnswers).forEach(([id,zone])=>{
+    const row=document.querySelector(`#clueRows .clue-row[data-id="${id}"]`);
+    if(!row) return;
+    const pts=zone==='critical'?5:zone==='important'?3:0;
+    score(row.dataset.service,pts);
+  });
+}
 function roleAwarePowerMoves(){
   const roleMoves={
     it:[
@@ -448,7 +457,8 @@ function result(quiet){
   $('resultCard').textContent=s.name;
   $('serviceLink').href=addUtm(contactUrl,'result_'+s.id);
   track('quest_complete',{recommended_service:s.id,role:selectedRoleLabel||'none',next_move:(chosenPower&&chosenPower.title)||'none'});
-  const critical=[...document.querySelectorAll('.zone[data-zone="critical"] .tile h4')].map(x=>x.textContent).slice(0,3);
+  const criticalIds=Object.entries(clueAnswers).filter(([id,zone])=>zone==='critical').map(([id])=>id);
+  const critical=criticalIds.map(id=>{const row=document.querySelector(`#clueRows .clue-row[data-id="${id}"] .row-text`);return row?row.textContent:null;}).filter(Boolean).slice(0,3);
   $('why').innerHTML='<strong>'+t('whyHead')+'</strong><ul>'+(critical.map(c=>'<li>'+c+'</li>').join('')||'<li>'+t('whyFallback')+'</li>')+'</ul>';
   $('recommend').innerHTML='<strong>'+t('nextMove')+'</strong> '+s.next+'<br><br><strong>'+t('suggestedService')+'</strong> '+s.support;
   try{renderMetric(s);}catch(err){console.error('Metric render failed',err);}

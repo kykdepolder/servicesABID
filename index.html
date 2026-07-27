@@ -33,14 +33,15 @@
   </section>
 
   <section id="clueboard" class="screen panel">
-    <div class="head"><p class="eyebrow">Round 2</p><h2>Sort 4 clue cards.</h2><p>Tap a clue card to pick it up, then tap a zone. Dragging works too.</p></div>
-    <div class="board-layout">
-      <div class="tile-bank"><h3>Clue bank</h3><p>Six cards. Prioritize what matters.</p><div id="clueBank" class="tile-list"></div></div>
-      <div class="zones">
-        <div class="zone" data-zone="critical"><h3>Critical</h3><span>Must solve first</span></div>
-        <div class="zone" data-zone="important"><h3>Important</h3><span>Needs attention</span></div>
-        <div class="zone" data-zone="not-relevant"><h3>Not relevant</h3><span>Leave out for now</span></div>
+    <div class="head"><p class="eyebrow">Round 2</p><h2>Sort 4 clue cards.</h2><p>Mark each clue as Critical, Important, or Not relevant.</p></div>
+    <div class="clue-table" id="clueTable" role="table" aria-label="Clue priority table">
+      <div class="clue-row clue-row-head" role="row">
+        <span class="clue-row-label sr-only">Clue</span>
+        <span class="clue-col-head" data-zone="critical"><b>Critical</b><small>Must solve first</small></span>
+        <span class="clue-col-head" data-zone="important"><b>Important</b><small>Needs attention</small></span>
+        <span class="clue-col-head" data-zone="not-relevant"><b>Not relevant</b><small>Leave out for now</small></span>
       </div>
+      <div id="clueRows"></div>
     </div>
     <div class="actions"><button class="primary-btn" id="lockBoard">Lock clue board</button></div>
   </section>
